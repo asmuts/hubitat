@@ -1,3 +1,7 @@
+/*
+ *	Hubitat Import URL: https://github.com/asmuts/hubitat/blob/master/WirelessSensorTags/WST_App.groovy
+ *
+ */
 definition(
     name: 'Wireless Sensor Tags App',
     namespace: 'asmuts',
@@ -43,7 +47,7 @@ mappings {
     Generate an event on the device.
 */
 def consumeWSTEvent () {
-    log.trace "consumeWSTEvent: $params"
+    logTrace "consumeWSTEvent: $params"
 
     def id = params.id.toInteger()
     def type = params.type
@@ -71,7 +75,7 @@ def consumeWSTEvent () {
                 case 'water_dried': data = [water : 'dry']; break
             }
 
-            log.trace 'callback action = ' + data
+            logTrace 'callback action = ' + data
 
             if (data) {
                 d.generateEvent(data)
@@ -99,7 +103,7 @@ def consumeWSTEvent () {
 */
 def authPage() {
     if (!atomicState.accessToken) {
-        log.debug 'No Hubitat access token found. Creating access token'
+        logDebug 'No Hubitat access token found. Creating access token'
         createAccessToken()
         atomicState.accessToken = state.accessToken
     }
@@ -110,14 +114,14 @@ def authPage() {
     def oauthTokenProvided = false
 
     if (atomicState.authToken) {
-        log.debug('WST Auth Token present.')
+        logDebug('WST Auth Token present.')
         description = 'You are connected.'
         uninstallAllowed = true
         oauthTokenProvided = true
     }
 
     def redirectUrl = buildOauthInitUrl()
-    log.debug "RedirectUrl = ${redirectUrl}"
+    logDebug "RedirectUrl = ${redirectUrl}"
 
     // get rid of next button until the user is actually auth'd
     if (!oauthTokenProvided) {
@@ -154,6 +158,7 @@ def wirelessDeviceList() {
         }
         section('Optional Settings', hidden: true, hideable: true) {
             input 'pollTimer', 'number', title:'Minutes between poll updates of the sensors', defaultValue:5
+            input name: 'debugOutput', type: 'bool', title: 'Enable debug logging?', defaultValue: true
         }
         section([mobileOnly:true]) {
             label title: 'Assign a name for this SmartApp instance (optional)', required: false
@@ -175,7 +180,7 @@ def getWirelessTags() {
         availDevices[dni] = device?.name
     }
 
-    log.debug "getWirelessTags. devices: $availDevices"
+    logDebug "getWirelessTags. devices: $availDevices"
 
     return availDevices
 }
@@ -185,9 +190,11 @@ def installed() {
 }
 
 def updated() {
-    log.trace 'update'
+    logTrace 'update'
     unsubscribe()
     initialize()
+    // turn off debuggin in 30 min
+    if (debugOutput) runIn(1800, logsOff)
 }
 
 def getChildNamespace() { 'asmuts' }
@@ -211,7 +218,7 @@ def getChildName(def tagInfo) {
 }
 
 def initialize() {
-    log.trace 'initialize'
+    logTrace 'initialize'
     unschedule()
 
     def curDevices = devices.collect { dni ->
@@ -222,11 +229,11 @@ def initialize() {
         if (!d) {
             d = addChildDevice(getChildNamespace(), getChildName(tag), dni, null, [label:tag?.name])
             d.initialSetup()
-            log.debug "created ${d.displayName} $dni"
+            logDebug "created ${d.displayName} $dni"
         }
         else
         {
-            log.debug "found ${d.displayName} $dni already exists"
+            logDebug "found ${d.displayName} $dni already exists"
             d.updated()
         }
 
@@ -238,7 +245,7 @@ def initialize() {
         return dni
     }
 
-    log.trace 'deleting unselected tags'
+    logTrace 'deleting unselected tags'
     def delete
     // Delete any that are no longer in settings
     if (!curDevices) {
@@ -260,7 +267,7 @@ def initialize() {
     // SmartThings limitation. Not sure about Hubitat. . . .)
     //pollHandler()
 
-    log.trace 'scheduling polling'
+    logTrace 'scheduling polling'
     runEvery5Minutes( pollHandler )
 }
 
@@ -280,7 +287,7 @@ def initialize() {
                 default redirect URL configured with your app will be used]
 */
 String buildOauthInitUrl() {
-    log.debug 'buildOauthInitUrl'
+    logDebug 'buildOauthInitUrl'
     String cid = getHubitatClientId()
 
     atomicState.oauthInitState = UUID.randomUUID().toString()
@@ -292,7 +299,7 @@ String buildOauthInitUrl() {
     ]
 
     String wstURL = 'https://www.mytaglist.com/oauth2/authorize.aspx?' + toQueryString(oauthParams)
-    log.debug( 'buildOauthInitUrl. wstURL: $wstURL')
+    logDebug( 'buildOauthInitUrl. wstURL: $wstURL')
     return wstURL
 }
 
@@ -314,10 +321,10 @@ String buildOauthInitUrl() {
 
 */
 String buildRedirectUrl() {
-    log.debug 'buildRedirectUrl, using local API'
+    logDebug 'buildRedirectUrl, using local API'
     // SmartThings =  /api/token/${atomicState.accessToken}/smartapps/installations/${app.id}
     String accessGrantedURL = getFullLocalApiServerUrl() + "/accessGranted?access_token=${atomicState.accessToken}&"
-    log.debug( 'buildRedirectUrl. accessGrantedURL: ' + accessGrantedURL)
+    logDebug( 'buildRedirectUrl. accessGrantedURL: ' + accessGrantedURL)
     return accessGrantedURL
 }
 
@@ -339,11 +346,11 @@ String buildRedirectUrl() {
             access_token=[access token, save this]
 */
 def getAccessToken() {
-    log.debug "Step 2 and 3. Getting WST access token: $params"
+    logDebug "Step 2 and 3. Getting WST access token: $params"
 
     // this is irritating! just dumps another query string on top
     String code = params.code ? params.code : params['?code']
-    log.debug("code = ${code}")
+    logDebug("code = ${code}")
 
     String oauthState = params.state
     if ( oauthState != atomicState.oauthInitState ) {
@@ -374,16 +381,16 @@ def getAccessToken() {
                 if (resp.data) {
                     atomicState.authToken = jsonMap?.access_token
                 } else {
-                    log.trace 'error = ' + resp
+                    logTrace 'error = ' + resp
                 }
             } else {
-                log.trace 'response = ' + resp
+                logTrace 'response = ' + resp
             }
         }
     } catch ( ex ) {
         atomicState.authToken = null
         error = ex.message
-        log.trace 'Couldn\'t refresh access token. error = ' + ex
+        logTrace 'Couldn\'t refresh access token. error = ' + ex
     }
 
     String message = 'Your Wireless Sensor Tags Account is now connected to Hubitat!'
@@ -454,7 +461,7 @@ def getEventStates() {
     Active polling for data.  By default this is run every 5 minutes.
 */
 def pollHandler() {
-    log.trace 'pollHandler'
+    logTrace 'pollHandler'
     pollAllTags()
     updateAllDevices()
 }
@@ -475,7 +482,7 @@ void updateAllDevices() {
     Pulls the data from state and updates this device
 */
 def pollSingle(def child) {
-    log.trace 'pollSingle'
+    logTrace 'pollSingle'
     pollAllTags()
 
     def device = atomicState.tags.find { it.uuid == child.device.deviceNetworkId }
@@ -495,7 +502,7 @@ def updateChildDeviceFromState( def child ) {
 def updateDeviceStatus(def device, def d) {
     def tagEventStates = getEventStates()
 
-    log.trace device
+    logTrace device
 
     // parsing data here
     def data = [
@@ -528,11 +535,12 @@ def getPollRateMillis() { return 2 * 1000 }
     https://www.mytaglist.com/media/mytaglist.com/ethClient.asmx@op=GetTagList.html
 */
 def getTagStatusFromServer() {
-    log.trace 'getTagStatusFromServer'
+    logTrace 'getTagStatusFromServer'
     def result = postMessage('/ethClient.asmx/GetTagList', null)
     atomicState.tags = result?.d
     // mark this to indicate that the data is fresh.
     atomicState.lastPoll = now()
+    return atomicState.tags
 }
 
 /*
@@ -545,13 +553,13 @@ def getTagStatusFromServer() {
     */
 def pollAllTags() {
     def timeSince = (atomicState.lastPoll != null) ? now() - atomicState.lastPoll : 1000 * 1000
-    log.trace "pollAllTags time since last poll: ${timeSince}"
+    logTrace "pollAllTags time since last poll: ${timeSince}"
 
     if ((atomicState.tags == null) || (timeSince > getPollRateMillis())) {
         getTagStatusFromServer()
     //atomicState.lastPoll = now()
     } else {
-        log.trace 'Polled too recently. Balking.'
+        logTrace 'Polled too recently. Balking.'
     }
     return atomicState.tags
 }
@@ -579,7 +587,7 @@ def pollChild( child ) {
     https://www.mytaglist.com/media/mytaglist.com/ethClient.asmx@op=PingTag.html
 */
 def refreshChild( child ) {
-    log.trace "Refreshing ${child}"
+    logTrace "Refreshing ${child}"
     def id = getTagID(child.device.deviceNetworkId)
 
     if (id != null) {
@@ -591,7 +599,7 @@ def refreshChild( child ) {
         getTagStatusFromServer()
         updateChildDeviceFromState( child )
     } else {
-        log.trace 'Could not find tag'
+        logTrace 'Could not find tag'
     }
     return null
 }
@@ -606,7 +614,7 @@ def postMessage(path, def query) {
     postMessage(path, query, getdefaultTimeoutSeconds())
 }
 def postMessage(path, def query, timeoutSeconds) {
-    log.trace "postMessage ${path}"
+    logTrace "postMessage ${path}"
 
     def message = ''
     if (query != null) {
@@ -644,15 +652,15 @@ def postMessage(path, def query, timeoutSeconds) {
         httpPost(message) { resp ->
             if (resp.status == 200) {
                 if (resp.data) {
-                    log.trace 'success'
+                    logTrace 'success'
                     jsonMap = resp.data
                 } else {
-                    log.trace 'error = ' + resp
+                    logTrace 'error = ' + resp
                 }
             } else {
-                log.debug "http status: ${resp.status}"
+                logDebug "http status: ${resp.status}"
                 if (resp.status == 500 && resp.data.status.code == 14) {
-                    log.debug 'Need to refresh auth token?'
+                    logDebug 'Need to refresh auth token?'
                     atomicState.authToken = null
                 }
                 else
@@ -663,7 +671,7 @@ def postMessage(path, def query, timeoutSeconds) {
         }
     } catch ( ex ) {
         //atomicState.authToken = null
-        log.trace 'postMessage. error = ' + ex
+        logTrace 'postMessage. error = ' + ex
     }
 
     return jsonMap
@@ -781,7 +789,7 @@ def beep(def child, int len) {
         ]
         postMessage('/ethClient.asmx/Beep', query)
     } else {
-        log.trace 'Could not find tag'
+        logTrace 'Could not find tag'
     }
 
     return null
@@ -799,7 +807,7 @@ def light(def child, def on, def flash) {
         ]
         postMessage(command, query)
     } else {
-        log.trace 'Could not find tag'
+        logTrace 'Could not find tag'
     }
 
     return null
@@ -825,7 +833,7 @@ def armMotion(def child) {
         ]
         postMessage('/ethClient.asmx/Arm', query)
     } else {
-        log.trace 'Could not find tag'
+        logTrace 'Could not find tag'
     }
 
     return null
@@ -850,7 +858,7 @@ def setDoorClosed(def child) {
         ]
         postMessage('/ethClient.asmx/Arm', query)
     } else {
-        log.trace 'Could not find tag'
+        logTrace 'Could not find tag'
     }
 
     return null
@@ -868,7 +876,7 @@ def disarm(def child) {
         ]
         postMessage('/ethClient.asmx/DisArm', query)
     } else {
-        log.trace 'Could not find tag'
+        logTrace 'Could not find tag'
     }
 
     return null
@@ -886,7 +894,7 @@ def disarm(def child) {
     https://www.mytaglist.com/media/mytaglist.com/ethClient.asmx.html
 */
 def setMotionSensorConfig(def child, def mode, def timeDelay) {
-    log.trace 'setMotionSensorConfig'
+    logTrace 'setMotionSensorConfig'
 
     def id = getTagID(child.device.deviceNetworkId)
 
@@ -924,7 +932,7 @@ def setMotionSensorConfig(def child, def mode, def timeDelay) {
         }
     }
     } else {
-        log.trace 'Could not find tag'
+        logTrace 'Could not find tag'
 }
 
     return null
@@ -1006,4 +1014,21 @@ def toJson(Map m) {
 
 def toQueryString(Map m) {
     return m.collect { k, v -> "${k}=${URLEncoder.encode(v.toString())}" }.sort().join('&')
+}
+
+def logsOff() {
+    log.warn 'debug logging disabled...'
+    device.updateSetting('debugOutput', [value:'false', type:'bool'])
+}
+
+private logDebug(msg) {
+    if (settings?.debugOutput || settings?.debugOutput == null) {
+        log.debug "$msg"
+    }
+}
+
+private logTrace(msg) {
+    if (settings?.debugOutput || settings?.debugOutput == null) {
+        log.trace "$msg"
+    }
 }

@@ -1,4 +1,8 @@
-metadata {
+/*
+ *	Hubitat Import URL: https://github.com/asmuts/hubitat/blob/master/WirelessSensorTags/WST_Moisture_Driver.groovy
+ *
+ */
+ metadata {
     definition (name: 'Wireless Sensor Tags Moisture', namespace: 'asmuts', author: 'asmuts') {
     capability 'Water Sensor'
     capability 'Presence Sensor'
@@ -14,20 +18,24 @@ metadata {
 
     attribute 'tagType', 'string'
     }
+
+    preferences {
+      input name: 'debugOutput', type: 'bool', title: 'Enable debug logging?', defaultValue: true
+    }
 }
 
 // parse events into attributes
 def parse(String description) {
-  log.debug "Parsing '${description}'"
+  logDebug "Parsing '${description}'"
 }
 
 void poll() {
-  log.debug 'poll'
+  logDebug 'poll'
   parent.pollChild(this)
 }
 
 def refresh() {
-  log.debug 'refresh'
+  logDebug 'refresh'
   parent.refreshChild(this)
 }
 
@@ -35,11 +43,12 @@ def initialSetup() {
 }
 
 def updated() {
-  log.trace 'updated'
+  logTrace 'updated'
+  if (debugOutput) runIn(1800, logsOff)
 }
 
 void generateEvent(Map results) {
-  log.debug "generateEvent. parsing data $results"
+  logDebug "generateEvent. parsing data $results"
 
   if (results) {
     results.each { name, value ->
@@ -48,7 +57,7 @@ void generateEvent(Map results) {
       if (name == 'temperature') {
         def curTemp = device.currentValue(name)
         def tempValue = getTemperature(value)
-        log.debug( "current temp: ${curTemp} | event temp: ${tempValue}" )
+        logDebug( "current temp: ${curTemp} | event temp: ${tempValue}" )
         boolean isChange = curTemp.toString() != tempValue.toString()
         isDisplayed = isChange
         sendEvent(name: name, value: tempValue, unit: getTemperatureScale(), displayed: isDisplayed)
@@ -68,5 +77,24 @@ def getTemperature(value) {
     return celsius
   } else {
     return celsiusToFahrenheit(celsius) as Integer
+  }
+}
+
+////////////////////////////////////////////////////////////
+
+def logsOff() {
+  log.warn 'debug logging disabled...'
+  device.updateSetting('debugOutput', [value:'false', type:'bool'])
+}
+
+private logDebug(msg) {
+  if (settings?.debugOutput || settings?.debugOutput == null) {
+    log.debug "$msg"
+  }
+}
+
+private logTrace(msg) {
+  if (settings?.debugOutput || settings?.debugOutput == null) {
+    log.trace "$msg"
   }
 }

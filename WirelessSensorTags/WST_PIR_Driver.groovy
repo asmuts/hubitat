@@ -1,4 +1,8 @@
-metadata {
+/*
+ *	Hubitat Import URL: https://github.com/asmuts/hubitat/blob/master/WirelessSensorTags/WST_PIR_Driver.groovy
+ *
+ */
+ metadata {
     definition (name: 'Wireless Sensor Tags PIR', namespace: 'asmuts', author: 'asmuts') {
         capability 'Tone'
         capability 'Relative Humidity Measurement'
@@ -18,58 +22,62 @@ metadata {
         //attribute 'motionMode', 'string'
         attribute 'armed', 'boolean'
     }
+
+    preferences {
+      input name: 'debugOutput', type: 'bool', title: 'Enable debug logging?', defaultValue: true
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
 // parse events into attributes
 def parse(String description) {
-  log.debug "Parsing '${description}'"
+  logDebug "Parsing '${description}'"
 }
 
 def beep() {
-  log.debug "Executing 'beep'"
+  logDebug "Executing 'beep'"
   parent.beep(this, 3)
 }
 
 def on() {
-  log.debug "Executing 'on'"
+  logDebug "Executing 'on'"
   parent.light(this, true, false)
   sendEvent(name: 'switch', value: 'on')
 }
 
 def off() {
-  log.debug "Executing 'off'"
+  logDebug "Executing 'off'"
   parent.light(this, false, false)
   sendEvent(name: 'switch', value: 'off')
 }
 
 void poll() {
-  log.debug 'poll'
+  logDebug 'poll'
   parent.pollChild(this)
 }
 
 def refresh() {
-  log.debug 'refresh'
+  logDebug 'refresh'
   parent.refreshChild(this)
 }
 
 // // this will arm
 // def setModeToMotion() {
-//   log.debug 'set to accel'
+//   logDebug 'set to accel'
 //   def newMode = 'accel'
 //   parent.setMotionSensorConfig(this, newMode, getMotionDecay())
 //   sendEvent(name: 'motionMode', value: newMode)
 // }
 
 void disarm() {
-  log.debug 'set to disarmed'
+  logDebug 'set to disarmed'
   parent.disarm(this)
   sendEvent(name: 'armed', value: false)
 }
 
 void arm() {
-  log.debug 'set to armed'
+  logDebug 'set to armed'
   parent.armMotion(this)
   sendEvent(name: 'armed', value: true)
 }
@@ -85,13 +93,14 @@ def getMotionDecay() {
 }
 
 def updated() {
-  log.trace 'updated'
+  logTrace 'updated'
+  if (debugOutput) runIn(1800, logsOff)
 // AS - I have no idea why we'd do this. It messes everything up and times out the init on the parent
 //parent.setMotionMode(this, device.currentState("motionMode")?.stringValue, getMotionDecay())
 }
 
 void generateEvent(Map results) {
-  log.debug "generateEvent. parsing data $results"
+  logDebug "generateEvent. parsing data $results"
 
   if (results) {
     results.each { name, value ->
@@ -100,7 +109,7 @@ void generateEvent(Map results) {
       if (name == 'temperature') {
         def curTemp = device.currentValue(name)
         def tempValue = getTemperature(value)
-        log.debug( 'current temp: ' + curTemp )
+        logDebug( 'current temp: ' + curTemp )
         boolean isChange = curTemp.toString() != tempValue.toString()
         isDisplayed = isChange
 
@@ -123,5 +132,24 @@ def getTemperature(value) {
     return celsius
   } else {
     return celsiusToFahrenheit(celsius) as Integer
+  }
+}
+
+////////////////////////////////////////////////////////////
+
+def logsOff() {
+  log.warn 'debug logging disabled...'
+  device.updateSetting('debugOutput', [value:'false', type:'bool'])
+}
+
+private logDebug(msg) {
+  if (settings?.debugOutput || settings?.debugOutput == null) {
+    log.debug "$msg"
+  }
+}
+
+private logTrace(msg) {
+  if (settings?.debugOutput || settings?.debugOutput == null) {
+    log.trace "$msg"
   }
 }

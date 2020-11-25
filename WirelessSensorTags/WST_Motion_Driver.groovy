@@ -1,4 +1,8 @@
-metadata {
+/*
+ *	Hubitat Import URL: https://github.com/asmuts/hubitat/blob/master/WirelessSensorTags/WST_Motion_Driver.groovy
+ *
+ */
+ metadata {
     definition (name: 'Wireless Sensor Tags Motion', namespace: 'asmuts', author: 'asmuts') {
         capability 'Presence Sensor'
         capability 'Acceleration Sensor'
@@ -28,9 +32,10 @@ metadata {
     }
 
     preferences {
-    input 'motionDecay', 'number', title: 'Motion Rearm Time',
+      input 'motionDecay', 'number', title: 'Motion Rearm Time',
         description: 'Seconds (min 60 for now)',
         defaultValue: 60, required: true, displayDuringSetup: true
+      input name: 'debugOutput', type: 'bool', title: 'Enable debug logging?', defaultValue: true
     }
 }
 
@@ -38,23 +43,23 @@ metadata {
 
 // parse events into attributes
 def parse(String description) {
-  log.debug "Parsing '${description}'"
+  logDebug "Parsing '${description}'"
 }
 
 // handle commands
 def beep() {
-  log.debug "Executing 'beep'"
+  logDebug "Executing 'beep'"
   parent.beep(this, 3)
 }
 
 def on() {
-  log.debug "Executing 'on'"
+  logDebug "Executing 'on'"
   parent.light(this, true, false)
   sendEvent(name: 'switch', value: 'on')
 }
 
 def off() {
-  log.debug "Executing 'off'"
+  logDebug "Executing 'off'"
   parent.light(this, false, false)
   sendEvent(name: 'switch', value: 'off')
 }
@@ -65,24 +70,24 @@ def off() {
 // Looks like Hubitat might use it.
 // It could call refresh on the parent.
 void poll() {
-  log.debug 'poll'
+  logDebug 'poll'
   parent.pollChild(this)
 }
 
 def refresh() {
-  log.debug 'refresh'
+  logDebug 'refresh'
   parent.refreshChild(this)
 }
 
 def setModeToMotion() {
-  log.debug 'set to accel'
+  logDebug 'set to accel'
   def newMode = 'accel'
   parent.setMotionSensorConfig(this, newMode, getMotionDecay())
   sendEvent(name: 'motionMode', value: newMode)
 }
 
 def setModeToDoorMonitoring() {
-  log.debug 'set to door monitoring'
+  logDebug 'set to door monitoring'
   def newMode = 'door'
   parent.disarm(this)
   parent.setMotionSensorConfig(this, newMode, getMotionDecay())
@@ -90,19 +95,19 @@ def setModeToDoorMonitoring() {
 }
 
 void disarm() {
-  log.debug 'set to disarmed'
+  logDebug 'set to disarmed'
   parent.disarm(this)
   sendEvent(name: 'armed', value: false)
 }
 
 void arm() {
-  log.debug 'set to armed'
+  logDebug 'set to armed'
   parent.armMotion(this)
   sendEvent(name: 'armed', value: true)
 }
 
 void setDoorClosedPosition() {
-  log.debug 'set door closed pos'
+  logDebug 'set door closed pos'
   //parent.disarm(this)
   parent.setDoorClosed(this)
 }
@@ -118,13 +123,14 @@ def getMotionDecay() {
 }
 
 def updated() {
-  log.trace 'updated'
+  logTrace 'updated'
+  if (debugOutput) runIn(1800, logsOff)
 // AThisIt messes everything up and times out the init on the parent
 //parent.setMotionSensorConfig(this, device.currentState("motionMode")?.stringValue, getMotionDecay())
 }
 
 void generateEvent(Map results) {
-  log.debug "generateEvent. parsing data $results"
+  logDebug "generateEvent. parsing data $results"
 
   if (results) {
     results.each { name, value ->
@@ -133,11 +139,11 @@ void generateEvent(Map results) {
       if (name == 'temperature') {
         def curTemp = device.currentValue(name)
         def tempValue = getTemperature(value)
-        log.debug( "current temp: ${curTemp} | event temp: ${tempValue}" )
+        logDebug( "current temp: ${curTemp} | event temp: ${tempValue}" )
         // TODO test this logic!
         boolean isChange = curTemp.toString() != tempValue.toString()
         isDisplayed = isChange
-        //log.trace("isChange ${isChange}")
+        //logTrace("isChange ${isChange}")
         sendEvent(name: name, value: tempValue, unit: getTemperatureScale(), displayed: isDisplayed)
       }
       else {
@@ -156,4 +162,23 @@ def getTemperature(value) {
   } else {
     return celsiusToFahrenheit(celsius) as Integer
   }
+}
+
+////////////////////////////////////////////////////////////
+
+def logsOff() {
+  log.warn 'debug logging disabled...'
+  device.updateSetting('debugOutput', [value:'false', type:'bool'])
+}
+
+private logDebug(msg) {
+  if (settings?.debugOutput || settings?.debugOutput == null) {
+    log.debug "$msg"
+  }
+}
+
+private logTrace(msg) {
+    if (settings?.debugOutput || settings?.debugOutput == null) {
+        log.trace "$msg"
+    }
 }
