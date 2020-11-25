@@ -60,9 +60,7 @@ def consumeWSTEvent () {
                 case 'oor': data = [presence: 'not present']; break
                 case 'back_in_range': data = [presence: 'present']; break
                 case 'motion_detected': data = [acceleration: 'active', motion: 'active']; break
-                //case 'motion_detected': data = [acceleration: 'active', motion: 'active']; startMotionTimer(d); break
 
-                // motion timeout callback is not working currently in WST
                 // AS-timeout callback seems to be fine as of 11/03/2016
                 // There's no need for motion timeout checking. polling will handle failures
                 case 'motion_timedout': data = [acceleration: 'inactive', motion: 'inactive']; break
@@ -200,8 +198,7 @@ def getChildName(def tagInfo) {
         switch (tagInfo.tagType) {
             case 32:
             case 33:
-                // TODO create driver for moisture
-                //     deviceType = 'Wireless Sensor Tags Water'
+                deviceType = 'Wireless Sensor Tags Moisture'
                 break
             case 72:
                 deviceType = 'Wireless Sensor Tags PIR'
@@ -806,70 +803,11 @@ def light(def child, def on, def flash) {
 }
 
 // //////////////////////////////////////////////////////////////////////////////
-// def startMotionTimer(def child) {
-//     log.trace 'start motion timer as a backup'
-
-//     if (state.motionTimers == null) {
-//         state.motionTimers = [:]
-//     }
-
-//     // AS - I added a longish time hardcoded here just for now.
-//     // this is a fail safe
-//     // there should be a separate setting for this.
-//     //def delayTime = child.getMotionDecay() * 100
-//     def delayTime = 60 * 30 // 30 minutes
-//     log.trace 'delayTime = ' + delayTime
-
-//     // don't do less than a minute in this way, once WST has the callback working it will be better
 //     // AS 2/25/17 - the inactive callback works now
-//     // hence, we really don't want this. WST will NOT send a motion event if there is continuous motion.
+//     // hence, we really don't want this. WST will NOT send a motion event
+//    // if there is continuous motion.
 //     // Hence, we'll mark the tag as no motion when there really is motion.
 //     // Polling should corrent any missed inactive events.
-//     delayTime = (delayTime < 60) ? 60 : delayTime
-
-//     state.motionTimers[child.device.deviceNetworkId] = now() + delayTime
-
-//     runIn(delayTime, motionTimerHander)
-// }
-
-// TODO rethink this.  It's no longer needed
-// def motionTimerHander() {
-//     def more = 0
-//     def removeList = []
-
-//     state.motionTimers.each { child, time ->
-//         if (time <= now()) {
-//             def tag = getChildDevice(child)
-//             resMotionDetection(tag)
-//             removeList.add(child)
-//         } else {
-//             if ((more == 0) || (more > time)) {
-//                 more = time
-//             }
-//         }
-//     }
-
-//     if (more != 0) {
-//         log.trace 'running again'
-//         more = more + 5 - now()
-//         runIn((more < 60) ? 60 : more, motionTimerHander)
-//     }
-
-//     // clean up handled events
-//     removeList.each {
-//         state.motionTimers.remove(it)
-//     }
-// }
-
-// def resMotionDetection(def child) {
-//     log.trace 'turning off motion'
-
-//     // now turn off in device
-//     def data = [acceleration: 'inactive', motion: 'inactive']
-//     child.generateEvent(data)
-
-//     return null
-// }
 
 /*
     TODO make sure that door closing is using setDoorClosed . . .
