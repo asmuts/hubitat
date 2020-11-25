@@ -32,9 +32,6 @@
     }
 
     preferences {
-      input 'motionDecay', 'number', title: 'Motion Rearm Time',
-        description: 'Seconds (min 60 for now)',
-        defaultValue: 60, required: true, displayDuringSetup: true
       input name: 'debugOutput', type: 'bool', title: 'Enable debug logging?', defaultValue: true
     }
 }
@@ -82,7 +79,7 @@ def refresh() {
 def setModeToMotion() {
   logDebug 'set to accel'
   def newMode = 'accel'
-  parent.setMotionSensorConfig(this, newMode, getMotionDecay())
+  parent.setMotionSensorConfig(this, newMode)
   sendEvent(name: 'motionMode', value: newMode)
 }
 
@@ -90,7 +87,7 @@ def setModeToDoorMonitoring() {
   logDebug 'set to door monitoring'
   def newMode = 'door'
   parent.disarm(this)
-  parent.setMotionSensorConfig(this, newMode, getMotionDecay())
+  parent.setMotionSensorConfig(this, newMode)
   sendEvent(name: 'motionMode', value: newMode)
 }
 
@@ -114,12 +111,7 @@ void setDoorClosedPosition() {
 
 def initialSetup() {
   sendEvent(name: 'motionMode', value: 'accel')
-  parent.setMotionSensorConfig(this, 'accel', getMotionDecay())
-}
-
-def getMotionDecay() {
-  def timer = (settings.motionDecay != null) ? settings.motionDecay.toInteger() : 60
-  return timer
+  parent.setMotionSensorConfig(this, 'accel')
 }
 
 def updated() {

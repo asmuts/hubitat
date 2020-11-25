@@ -84,13 +84,9 @@ void arm() {
 
 def initialSetup() {
   sendEvent(name: 'motionMode', value: 'accel')
-  parent.setMotionMode(this, 'accel', getMotionDecay())
+  parent.setMotionMode(this, 'accel')
 }
 
-def getMotionDecay() {
-  def timer = (settings.motionDecay != null) ? settings.motionDecay.toInteger() : 60
-  return timer
-}
 
 def updated() {
   logTrace 'updated'

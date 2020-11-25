@@ -893,7 +893,7 @@ def disarm(def child) {
 
     https://www.mytaglist.com/media/mytaglist.com/ethClient.asmx.html
 */
-def setMotionSensorConfig(def child, def mode, def timeDelay) {
+def setMotionSensorConfig(def child, def mode) {
     logTrace 'setMotionSensorConfig'
 
     def id = getTagID(child.device.deviceNetworkId)
@@ -917,7 +917,7 @@ def setMotionSensorConfig(def child, def mode, def timeDelay) {
                         break
                 }
 
-                result.d.auto_reset_delay = timeDelay
+                //result.d.auto_reset_delay = timeDelay
 
                 String jsonString = toJson(result.d)
                 jsonString = toJson(result.d).substring(1, toJson(result.d).size() - 1)
