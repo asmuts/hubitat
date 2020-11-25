@@ -597,7 +597,7 @@ def refreshChild( child ) {
 }
 
 //https://docs.hubitat.com/index.php?title=Common_Methods_Object#httpPost
-def getdefaultTimeoutSeconds() { return 30 }
+def getdefaultTimeoutSeconds() { return 15 }
 /*
     This handles all communication with WST.
     It includes the access token in the headers.
@@ -616,7 +616,8 @@ def postMessage(path, def query, timeoutSeconds) {
                 uri: 'https://www.mytaglist.com/',
                 path: path,
                 headers: ['Content-Type': 'application/json', 'Authorization': "Bearer ${atomicState.authToken}"],
-                body: query
+                body: query,
+                timeout: timeoutSeconds
             ]
         } else {
             message = [
@@ -624,7 +625,8 @@ def postMessage(path, def query, timeoutSeconds) {
                 uri: 'https://www.mytaglist.com/',
                 path: path,
                 headers: ['Content-Type': 'application/json', 'Authorization': "Bearer ${atomicState.authToken}"],
-                body: toJson(query)
+                body: toJson(query),
+                timeout: timeoutSeconds
             ]
         }
     } else {
@@ -632,7 +634,8 @@ def postMessage(path, def query, timeoutSeconds) {
             //method: 'POST',
             uri: 'https://www.mytaglist.com/',
             path: path,
-            headers: ['Content-Type': 'application/json', 'Authorization': "Bearer ${atomicState.authToken}"]
+            headers: ['Content-Type': 'application/json', 'Authorization': "Bearer ${atomicState.authToken}"],
+            timeout: timeoutSeconds
         ]
     }
 

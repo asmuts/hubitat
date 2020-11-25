@@ -101,8 +101,7 @@ void generateEvent(Map results) {
         def curTemp = device.currentValue(name)
         def tempValue = getTemperature(value)
         log.debug( 'current temp: ' + curTemp )
-        boolean isChange = curTemp.toString() == tempValue.toString()
-        //isTemperatureStateChange(device, name, tempValue.toString())
+        boolean isChange = curTemp.toString() != tempValue.toString()
         isDisplayed = isChange
 
         sendEvent(name: name, value: tempValue, unit: getTemperatureScale(), displayed: isDisplayed)
